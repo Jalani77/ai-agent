@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Settings {
+  id                  Int      @id @default(1)
+  phoneNumber         String?
+  reminderHoursBefore Int      @default(24)
+  smsEnabled          Boolean  @default(true)
+  updatedAt           DateTime @updatedAt
+}
+
+model Course {
+  id           String       @id @default(cuid())
+  name         String
+  code         String?
+  color        String       @default("#6366f1")
+  syllabusText String?
+  createdAt    DateTime     @default(now())
+  assignments  Assignment[]
+  documents    Document[]
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  name      String
+  content   String
+  type      String   @default("pdf")
+  createdAt DateTime @default(now())
+}
+
+model Assignment {
+  id            String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  type          String   @default("assignment")
+  dueDate       DateTime
+  priority      String   @default("medium")
+  completed     Boolean  @default(false)
+  reminderSent  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
