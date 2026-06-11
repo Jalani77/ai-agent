@@ -26,18 +26,18 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | Postgres connection string |
-| `CRON_SECRET` | Optional | Secures the reminder cron endpoint in production |
+| `DATABASE_URL` | Yes | Postgres connection string (Vercel Postgres, Neon, or Prisma Postgres) |
 
-No OpenAI or Twilio keys needed for the demo.
+No OpenAI, Twilio, or cron setup needed for the demo.
 
 ## Deploy to Vercel
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Jalani77/ai-agent&project-name=study-command&env=DATABASE_URL)
 
 1. Click **Deploy with Vercel** above (or import [github.com/Jalani77/ai-agent](https://github.com/Jalani77/ai-agent)).
-2. Add a **Postgres** database (Vercel Postgres or [Neon](https://neon.tech)) and set `DATABASE_URL`.
-3. Deploy — migrations run automatically during build.
+2. In Vercel → **Storage**, add **Postgres** (or use [Neon](https://neon.tech) / `npx create-db`).
+3. Set `DATABASE_URL` in **Environment Variables** (must be available at build time).
+4. Deploy — migrations run automatically when `DATABASE_URL` is set.
 
 ## Pages
 
