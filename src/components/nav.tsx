@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, BookOpen, MessageSquare, Settings } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -26,7 +27,8 @@ export function Nav() {
             Study Command
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          <NotificationBell />
           {links.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}

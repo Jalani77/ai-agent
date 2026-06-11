@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 
 const settingsSchema = z.object({
-  phoneNumber: z.string().optional().nullable(),
   reminderHoursBefore: z.number().int().min(1).max(168).optional(),
   smsEnabled: z.boolean().optional(),
 });

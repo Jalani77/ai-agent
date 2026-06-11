@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, MessageSquare } from "lucide-react";
+import { Bell } from "lucide-react";
 
 type Settings = {
-  phoneNumber: string | null;
   reminderHoursBefore: number;
   smsEnabled: boolean;
 };
@@ -13,6 +12,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
   const [settings, setSettings] = useState(initial);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [browserStatus, setBrowserStatus] = useState<string | null>(null);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -27,15 +27,35 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  async function enableBrowserNotifications() {
+    if (!("Notification" in window)) {
+      setBrowserStatus("Your browser doesn't support notifications.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      setBrowserStatus("Browser notifications enabled.");
+      new Notification("Study Command", {
+        body: "You'll get alerts when assignments are due soon.",
+        icon: "/favicon.ico",
+      });
+    } else if (permission === "denied") {
+      setBrowserStatus("Blocked — enable notifications in your browser settings.");
+    } else {
+      setBrowserStatus("Permission not granted.");
+    }
+  }
+
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
         <div className="flex items-center gap-3">
-          <MessageSquare className="h-5 w-5 text-indigo-400" />
+          <Bell className="h-5 w-5 text-indigo-400" />
           <div>
-            <h2 className="font-medium text-zinc-200">SMS reminders</h2>
+            <h2 className="font-medium text-zinc-200">In-app reminders</h2>
             <p className="text-sm text-zinc-500">
-              Get text messages instead of email when assignments are due soon.
+              See due-soon alerts in the notification bell and browser — no SMS
+              or API keys needed.
             </p>
           </div>
         </div>
@@ -49,27 +69,25 @@ export function SettingsForm({ initial }: { initial: Settings }) {
             }
             className="rounded border-zinc-600"
           />
-          <span className="text-sm text-zinc-300">Enable SMS reminders</span>
+          <span className="text-sm text-zinc-300">Enable due-date reminders</span>
         </label>
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <Phone className="h-5 w-5 text-indigo-400" />
-          <h2 className="font-medium text-zinc-200">Phone number</h2>
-        </div>
-        <input
-          type="tel"
-          placeholder="+1 555 123 4567"
-          value={settings.phoneNumber ?? ""}
-          onChange={(e) =>
-            setSettings({ ...settings, phoneNumber: e.target.value })
-          }
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
-        />
-        <p className="text-xs text-zinc-500">
-          Use E.164 format (e.g. +15551234567). Powered by Twilio.
+        <h2 className="font-medium text-zinc-200">Browser notifications</h2>
+        <p className="text-sm text-zinc-500">
+          Optional — get a pop-up on your device when deadlines are approaching.
         </p>
+        <button
+          type="button"
+          onClick={enableBrowserNotifications}
+          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:border-indigo-500/50 hover:text-indigo-300"
+        >
+          Enable browser notifications
+        </button>
+        {browserStatus && (
+          <p className="text-xs text-zinc-400">{browserStatus}</p>
+        )}
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">

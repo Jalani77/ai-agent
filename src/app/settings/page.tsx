@@ -19,7 +19,7 @@ export default async function SettingsPage() {
             Settings
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Configure SMS text reminders via Twilio.
+            Configure in-app and browser notifications — no API keys needed.
           </p>
         </div>
         <SettingsForm initial={settings} />

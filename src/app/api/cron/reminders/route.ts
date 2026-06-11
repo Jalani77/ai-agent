@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { formatReminderMessage, sendSms } from "@/lib/sms";
+import { getDueSoonAssignments } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -10,50 +10,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const settings = await prisma.settings.findUnique({ where: { id: 1 } });
-  if (!settings?.smsEnabled || !settings.phoneNumber) {
-    return NextResponse.json({ sent: 0, reason: "SMS not configured" });
-  }
+  const dueSoon = await getDueSoonAssignments();
+  const unsent = dueSoon.filter((a) => !a.reminderSent);
 
-  const now = new Date();
-  const windowEnd = new Date(
-    now.getTime() + settings.reminderHoursBefore * 60 * 60 * 1000,
-  );
-
-  const dueSoon = await prisma.assignment.findMany({
-    where: {
-      completed: false,
-      reminderSent: false,
-      dueDate: { gte: now, lte: windowEnd },
-    },
-    include: { course: true },
-  });
-
-  let sent = 0;
-  for (const assignment of dueSoon) {
-    const hoursUntil = Math.max(
-      1,
-      Math.round(
-        (assignment.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60),
-      ),
-    );
-
-    await sendSms(
-      settings.phoneNumber,
-      formatReminderMessage(
-        assignment.title,
-        assignment.course.name,
-        assignment.dueDate,
-        hoursUntil,
-      ),
-    );
-
+  for (const assignment of unsent) {
     await prisma.assignment.update({
       where: { id: assignment.id },
       data: { reminderSent: true },
     });
-    sent++;
   }
 
-  return NextResponse.json({ sent, checked: dueSoon.length });
+  return NextResponse.json({
+    marked: unsent.length,
+    checked: dueSoon.length,
+    mode: "in-app-notifications",
+  });
 }

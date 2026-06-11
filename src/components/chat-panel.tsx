@@ -1,29 +1,76 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useState } from "react";
 import { Send, Bot, User } from "lucide-react";
-import { useMemo, useState } from "react";
+
+type Message = { id: string; role: "user" | "assistant"; content: string };
 
 const suggestions = [
   "What assignments are due this week?",
-  "Summarize my CS syllabus grading policy",
   "When is my next exam?",
-  "What topics are covered in chapter 3?",
+  "What's my grading policy?",
+  "How many assignments do I have?",
 ];
 
 export function ChatPanel() {
   const [input, setInput] = useState("");
-  const transport = useMemo(
-    () => new DefaultChatTransport({ api: "/api/chat" }),
-    [],
-  );
-  const { messages, sendMessage, status } = useChat({ transport });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const isLoading = status === "streaming" || status === "submitted";
+  async function send(text: string) {
+    if (!text.trim() || loading) return;
+
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text.trim(),
+    };
+    setMessages((m) => [...m, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMsg].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+      const data = await res.json();
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.reply ?? "Sorry, I couldn't process that.",
+        },
+      ]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "Something went wrong. Try again in a moment.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col rounded-xl border border-zinc-800 bg-zinc-900/60">
+      <div className="border-b border-zinc-800 px-4 py-2">
+        <p className="text-xs text-zinc-500">
+          Demo mode — no API key needed. Answers come from your assignments and uploaded materials.
+        </p>
+      </div>
+
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center">
@@ -32,14 +79,14 @@ export function ChatPanel() {
               Ask about your classes
             </h2>
             <p className="mt-2 max-w-md text-sm text-zinc-500">
-              I answer questions using your syllabi, uploaded PDFs, and assignment
-              data.
+              I search your syllabi, uploaded PDFs, and assignment data — no AI
+              API key required.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {suggestions.map((s) => (
                 <button
                   key={s}
-                  onClick={() => sendMessage({ text: s })}
+                  onClick={() => send(s)}
                   className="rounded-full border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-300"
                 >
                   {s}
@@ -60,19 +107,13 @@ export function ChatPanel() {
               </div>
             )}
             <div
-              className={`max-w-[80%] rounded-xl px-4 py-2 text-sm ${
+              className={`max-w-[80%] rounded-xl px-4 py-2 text-sm whitespace-pre-wrap ${
                 m.role === "user"
                   ? "bg-indigo-600 text-white"
                   : "bg-zinc-800 text-zinc-200"
               }`}
             >
-              {m.parts
-                ?.filter((p) => p.type === "text")
-                .map((p, i) => (
-                  <span key={i} className="whitespace-pre-wrap">
-                    {"text" in p ? p.text : ""}
-                  </span>
-                ))}
+              {m.content}
             </div>
             {m.role === "user" && (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-700">
@@ -82,13 +123,13 @@ export function ChatPanel() {
           </div>
         ))}
 
-        {isLoading && messages.at(-1)?.role === "user" && (
+        {loading && (
           <div className="flex gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20">
               <Bot className="h-4 w-4 text-indigo-400" />
             </div>
             <div className="rounded-xl bg-zinc-800 px-4 py-2 text-sm text-zinc-400">
-              Thinking...
+              Searching your materials...
             </div>
           </div>
         )}
@@ -97,9 +138,7 @@ export function ChatPanel() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (!input.trim() || isLoading) return;
-          sendMessage({ text: input });
-          setInput("");
+          send(input);
         }}
         className="border-t border-zinc-800 p-4"
       >
@@ -112,7 +151,7 @@ export function ChatPanel() {
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={loading || !input.trim()}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
