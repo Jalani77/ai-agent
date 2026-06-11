@@ -1,20 +1,14 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
+import { getDatabaseUrl } from "@/lib/database-config";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient(): PrismaClient {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error(
-      "DATABASE_URL is not set. Add a Postgres connection string in Vercel → Settings → Environment Variables.",
-    );
-  }
-
-  const pool = new pg.Pool({ connectionString: url });
+  const pool = new pg.Pool({ connectionString: getDatabaseUrl() });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
@@ -26,7 +20,6 @@ function getPrisma(): PrismaClient {
   return globalForPrisma.prisma;
 }
 
-// Lazy proxy — avoids connecting during `next build` when DATABASE_URL is unset
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
     const client = getPrisma();

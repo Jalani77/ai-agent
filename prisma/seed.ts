@@ -3,11 +3,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL is required to seed the database.");
-  process.exit(1);
-}
+import { getDatabaseUrl } from "../src/lib/database-config";
+
+const url = getDatabaseUrl();
 
 const pool = new pg.Pool({ connectionString: url });
 const adapter = new PrismaPg(pool);

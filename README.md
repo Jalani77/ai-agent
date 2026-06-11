@@ -26,9 +26,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | Postgres connection string (Vercel Postgres, Neon, or Prisma Postgres) |
+| `DATABASE_URL` | Optional | Postgres connection string — a demo DB is bundled so you can try it immediately |
 
 No OpenAI, Twilio, or cron setup needed for the demo.
+
+**Claim your free demo database** (keeps it permanently):  
+https://create-db.prisma.io/claim?projectID=proj_cmq8sx9750rejymf7jfmc535v
 
 ## Deploy to Vercel
 
