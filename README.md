@@ -5,9 +5,10 @@ Assignment tracker with a **timeline command center**, **in-app/browser notifica
 ## Features
 
 - **Timeline command center** — See every assignment and exam numbered 1–N on a vertical timeline (not a calendar grid)
+- **Check-off workflow** — Mark assignments done directly from the timeline and track your completion rate
 - **In-app notifications** — Bell icon shows due-soon assignments; optional browser pop-ups
 - **Demo assistant** — Ask questions about assignments, grading policies, and course materials (no OpenAI key needed)
-- **Course materials** — Paste syllabus text or upload PDFs to power the assistant
+- **Course materials** — Paste syllabus text or upload PDF/DOCX/TXT files; the app extracts assignment names and due dates into your timeline
 
 ## Quick start
 

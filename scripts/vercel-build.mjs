@@ -15,7 +15,13 @@ execSync("npx prisma generate", { stdio: "inherit" });
 
 if (process.env.DATABASE_URL) {
   console.log("Running database migrations...");
-  execSync("npx prisma migrate deploy", { stdio: "inherit" });
+  try {
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+  } catch {
+    console.warn(
+      "Prisma migrations failed during build. Continuing so the app can deploy; run migrations again once the database is reachable.",
+    );
+  }
 } else {
   console.warn("DATABASE_URL not set — skipping migrations.");
 }

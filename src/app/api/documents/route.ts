@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { extractPdfText } from "@/lib/pdf";
+import { extractAssignmentsFromText } from "@/lib/assignment-extractor";
+import { extractDocumentText } from "@/lib/pdf";
 
 export async function GET(req: NextRequest) {
   const courseId = req.nextUrl.searchParams.get("courseId");
@@ -23,14 +24,16 @@ export async function POST(req: NextRequest) {
   }
 
   let content = textContent?.trim() || "";
+  let documentType = "text";
 
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer());
-    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      content = await extractPdfText(buffer);
-    } else {
-      content = buffer.toString("utf-8");
-    }
+    content = await extractDocumentText(file, buffer);
+    documentType = file.name.toLowerCase().endsWith(".pdf")
+      ? "pdf"
+      : file.name.toLowerCase().endsWith(".docx")
+        ? "docx"
+        : "text";
   }
 
   if (!content) {
@@ -42,9 +45,43 @@ export async function POST(req: NextRequest) {
       courseId,
       name,
       content,
-      type: file?.name.endsWith(".pdf") ? "pdf" : "text",
+      type: documentType,
     },
   });
 
-  return NextResponse.json(document, { status: 201 });
+  const extracted = extractAssignmentsFromText(content);
+  const createdAssignments = [];
+
+  for (const item of extracted) {
+    const existing = await prisma.assignment.findFirst({
+      where: {
+        courseId,
+        title: item.title,
+        dueDate: item.dueDate,
+      },
+    });
+
+    if (existing) continue;
+
+    const assignment = await prisma.assignment.create({
+      data: {
+        courseId,
+        title: item.title,
+        description: `Imported from ${name}. Source: ${item.sourceLine}`,
+        type: item.type,
+        dueDate: item.dueDate,
+        priority: item.priority,
+      },
+    });
+    createdAssignments.push(assignment);
+  }
+
+  return NextResponse.json(
+    {
+      document,
+      extractedAssignments: createdAssignments,
+      extractedCount: createdAssignments.length,
+    },
+    { status: 201 },
+  );
 }

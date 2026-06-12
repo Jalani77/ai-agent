@@ -25,6 +25,7 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
     syllabusText: "",
   });
   const [uploading, setUploading] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<Record<string, string>>({});
 
   async function addCourse(e: React.FormEvent) {
     e.preventDefault();
@@ -49,11 +50,24 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
 
   async function uploadPdf(courseId: string, file: File) {
     setUploading(courseId);
+    setUploadMessage((messages) => ({
+      ...messages,
+      [courseId]: "Reading document and looking for due dates...",
+    }));
     const formData = new FormData();
     formData.append("courseId", courseId);
     formData.append("file", file);
-    await fetch("/api/documents", { method: "POST", body: formData });
+    const res = await fetch("/api/documents", { method: "POST", body: formData });
+    const data = await res.json();
     setUploading(null);
+    setUploadMessage((messages) => ({
+      ...messages,
+      [courseId]: res.ok
+        ? data.extractedCount > 0
+          ? `Imported ${data.extractedCount} assignment${data.extractedCount === 1 ? "" : "s"} from ${file.name}.`
+          : `Saved ${file.name}. I did not find assignment due dates, but the assistant can search it.`
+        : data.error ?? "Upload failed. Try a PDF, DOCX, TXT, or pasted syllabus text.",
+    }));
     router.refresh();
   }
 
@@ -136,10 +150,12 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
 
             <label className="mt-4 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-300">
               <Upload className="h-4 w-4" />
-              {uploading === course.id ? "Uploading..." : "Upload syllabus PDF or class materials"}
+              {uploading === course.id
+                ? "Uploading..."
+                : "Upload syllabus PDF, Word doc, or class materials"}
               <input
                 type="file"
-                accept=".pdf,.txt,.md"
+                accept=".pdf,.docx,.txt,.md"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -147,6 +163,11 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
                 }}
               />
             </label>
+            {uploadMessage[course.id] && (
+              <p className="mt-2 text-xs text-zinc-400">
+                {uploadMessage[course.id]}
+              </p>
+            )}
           </div>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { Nav } from "@/components/nav";
 import { Timeline, TimelineStats } from "@/components/timeline";
 import { AssignmentForm } from "@/components/assignment-form";
+import { FocusPanel } from "@/components/focus-panel";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function HomePage() {
         </div>
 
         <TimelineStats items={timelineItems} />
+        <FocusPanel items={timelineItems} />
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
           <section>
