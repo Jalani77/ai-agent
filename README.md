@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000).
 No OpenAI, Twilio, or cron setup needed for the demo.
 
 **Claim your free demo database** (keeps it permanently):  
-https://create-db.prisma.io/claim?projectID=proj_cmq8sx9750rejymf7jfmc535v
+https://create-db.prisma.io/claim?projectID=proj_cmqba1ks70fbb01dsb0re94na
 
 ## Deploy to Vercel
 
