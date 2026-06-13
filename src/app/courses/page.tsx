@@ -21,7 +21,8 @@ export default async function CoursesPage() {
             Courses & Materials
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Add syllabi and upload PDFs to power your AI assistant.
+            Paste your iCollege schedule or upload a syllabus once — assignments
+            and due dates import into your timeline automatically.
           </p>
         </div>
         <CourseManager courses={courses} />

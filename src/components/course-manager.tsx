@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { SyllabusImporter } from "@/components/syllabus-importer";
 
 type Course = {
   id: string;
@@ -24,12 +25,15 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
     color: COLORS[0],
     syllabusText: "",
   });
-  const [uploading, setUploading] = useState<string | null>(null);
-  const [uploadMessage, setUploadMessage] = useState<Record<string, string>>({});
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   async function addCourse(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name) return;
+
+    setCreating(true);
+    setCreateMessage("Creating course...");
 
     const res = await fetch("/api/courses", {
       method: "POST",
@@ -37,8 +41,22 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
       body: JSON.stringify(form),
     });
     const course = await res.json();
-    setCourses([...courses, { ...course, _count: { assignments: 0, documents: 0 } }]);
+    setCreating(false);
+
+    if (!res.ok) {
+      setCreateMessage(course.error ?? "Could not create course.");
+      return;
+    }
+
+    setCourses([
+      ...courses,
+      {
+        ...course,
+        _count: course._count ?? { assignments: 0, documents: 0 },
+      },
+    ]);
     setForm({ name: "", code: "", color: COLORS[0], syllabusText: "" });
+    setCreateMessage(course.importSummary?.message ?? "Course created.");
     router.refresh();
   }
 
@@ -48,33 +66,17 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
     router.refresh();
   }
 
-  async function uploadPdf(courseId: string, file: File) {
-    setUploading(courseId);
-    setUploadMessage((messages) => ({
-      ...messages,
-      [courseId]: "Reading document and looking for due dates...",
-    }));
-    const formData = new FormData();
-    formData.append("courseId", courseId);
-    formData.append("file", file);
-    const res = await fetch("/api/documents", { method: "POST", body: formData });
-    const data = await res.json();
-    setUploading(null);
-    setUploadMessage((messages) => ({
-      ...messages,
-      [courseId]: res.ok
-        ? data.extractedCount > 0
-          ? `Imported ${data.extractedCount} assignment${data.extractedCount === 1 ? "" : "s"} from ${file.name}.`
-          : `Saved ${file.name}. I did not find assignment due dates, but the assistant can search it.`
-        : data.error ?? "Upload failed. Try a PDF, DOCX, TXT, or pasted syllabus text.",
-    }));
-    router.refresh();
-  }
-
   return (
     <div className="space-y-8">
-      <form onSubmit={addCourse} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+      <form
+        onSubmit={addCourse}
+        className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4"
+      >
         <h2 className="font-medium text-zinc-200">Add course</h2>
+        <p className="text-xs text-zinc-500">
+          Paste your syllabus when creating a course and assignments will be
+          imported automatically.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <input
             placeholder="Course name"
@@ -102,18 +104,22 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
           ))}
         </div>
         <textarea
-          placeholder="Paste syllabus text here (or upload PDFs after creating the course)"
+          placeholder="Paste syllabus or iCollege schedule table here (optional — imports due dates automatically)"
           value={form.syllabusText}
           onChange={(e) => setForm({ ...form, syllabusText: e.target.value })}
-          rows={4}
+          rows={5}
           className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600"
         />
         <button
           type="submit"
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+          disabled={creating}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
         >
-          Create course
+          {creating ? "Creating..." : "Create course"}
         </button>
+        {createMessage && (
+          <p className="text-xs text-zinc-400">{createMessage}</p>
+        )}
       </form>
 
       <div className="space-y-4">
@@ -148,26 +154,11 @@ export function CourseManager({ courses: initial }: { courses: Course[] }) {
               {course._count?.documents ?? 0} documents
             </p>
 
-            <label className="mt-4 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-700 px-4 py-3 text-sm text-zinc-400 hover:border-indigo-500/50 hover:text-indigo-300">
-              <Upload className="h-4 w-4" />
-              {uploading === course.id
-                ? "Uploading..."
-                : "Upload syllabus PDF, Word doc, or class materials"}
-              <input
-                type="file"
-                accept=".pdf,.docx,.txt,.md"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) uploadPdf(course.id, file);
-                }}
-              />
-            </label>
-            {uploadMessage[course.id] && (
-              <p className="mt-2 text-xs text-zinc-400">
-                {uploadMessage[course.id]}
-              </p>
-            )}
+            <SyllabusImporter
+              courseId={course.id}
+              courseName={course.name}
+              initialText={course.syllabusText ?? ""}
+            />
           </div>
         ))}
       </div>
