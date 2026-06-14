@@ -8,6 +8,7 @@ type Course = { id: string; name: string };
 export function AssignmentForm({ courses }: { courses: Course[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     courseId: courses[0]?.id ?? "",
     title: "",
@@ -22,7 +23,8 @@ export function AssignmentForm({ courses }: { courses: Course[] }) {
     if (!form.courseId || !form.title || !form.dueDate) return;
 
     setLoading(true);
-    await fetch("/api/assignments", {
+    setMessage(null);
+    const res = await fetch("/api/assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -31,8 +33,16 @@ export function AssignmentForm({ courses }: { courses: Course[] }) {
       }),
     });
     setLoading(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error ?? "Could not save assignment. Try again.");
+      return;
+    }
+
+    setMessage("Saved to your timeline.");
     router.refresh();
-    setForm((f) => ({ ...f, title: "", description: "" }));
+    setForm((f) => ({ ...f, title: "", description: "", dueDate: "" }));
   }
 
   if (courses.length === 0) {
@@ -103,8 +113,15 @@ export function AssignmentForm({ courses }: { courses: Course[] }) {
         disabled={loading}
         className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
       >
-        {loading ? "Adding..." : "Add to timeline"}
+        {loading ? "Saving..." : "Add to timeline"}
       </button>
+      {message && (
+        <p
+          className={`text-xs ${message.includes("Saved") ? "text-emerald-400" : "text-rose-400"}`}
+        >
+          {message}
+        </p>
+      )}
     </form>
   );
 }

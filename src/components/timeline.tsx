@@ -11,6 +11,7 @@ import {
   GraduationCap,
   ClipboardList,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 
 export type TimelineItem = {
@@ -37,6 +38,11 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
     Record<string, boolean>
   >({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [hideCompleted, setHideCompleted] = useState(false);
+
+  const visibleItems = hideCompleted
+    ? items.filter((item) => !(completedOverrides[item.id] ?? item.completed))
+    : items;
 
   async function toggleCompleted(item: TimelineItem, completed: boolean) {
     setCompletedOverrides((current) => ({ ...current, [item.id]: completed }));
@@ -61,22 +67,54 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
     }
   }
 
+  async function deleteAssignment(item: TimelineItem) {
+    if (!confirm(`Delete "${item.title}"?`)) return;
+
+    setSavingId(item.id);
+    try {
+      const response = await fetch(`/api/assignments/${item.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Unable to delete assignment");
+      router.refresh();
+    } catch {
+      alert("Could not delete assignment. Try again.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   if (items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-900/50 p-12 text-center">
         <p className="text-lg text-zinc-300">No assignments yet</p>
         <p className="mt-2 text-sm text-zinc-500">
-          Add courses and assignments to see your full timeline here.
+          Add a course and import your syllabus, or use Quick add on the right.
         </p>
       </div>
     );
   }
 
   return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs text-zinc-500">
+          Showing {visibleItems.length} of {items.length}
+        </p>
+        <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <input
+            type="checkbox"
+            checked={hideCompleted}
+            onChange={(e) => setHideCompleted(e.target.checked)}
+            className="rounded border-zinc-700"
+          />
+          Hide completed
+        </label>
+      </div>
     <div className="relative">
       <div className="absolute left-[27px] top-4 bottom-4 w-px bg-gradient-to-b from-indigo-500/50 via-zinc-700 to-zinc-800" />
       <ul className="space-y-0">
-        {items.map((item, index) => {
+        {visibleItems.map((item, index) => {
           const completed = completedOverrides[item.id] ?? item.completed;
           const days = daysUntil(item.dueDate);
           const isPast = days < 0;
@@ -195,7 +233,15 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                   <p className="mt-3 text-sm text-zinc-400">{item.description}</p>
                 )}
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    onClick={() => deleteAssignment(item)}
+                    disabled={savingId === item.id}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
                   <button
                     onClick={() => toggleCompleted(item, !completed)}
                     disabled={savingId === item.id}
@@ -224,6 +270,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
           );
         })}
       </ul>
+    </div>
     </div>
   );
 }
